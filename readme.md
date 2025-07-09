@@ -5,6 +5,7 @@
 * Wordpress with php 8.3
 * Redis
 * Nginx
+* MariaDB
 
 ## How to run
 ```
