@@ -1,0 +1,77 @@
+services:
+  db:
+    image: mariadb:10.6
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: P4yLynX
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp_user
+      MYSQL_PASSWORD: wp_p4ylynx
+    volumes:
+      - db_data:/var/lib/mysql
+    command: --innodb-buffer-pool-size=512M
+
+  redis:
+    image: redis:6-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  wordpress:
+    build: wordpress/.
+    depends_on:
+      - db
+      - redis
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: wp_p4ylynx
+      WORDPRESS_DB_NAME: wordpress
+      PHP_OPCACHE_ENABLE: '1'
+      PHP_OPCACHE_MEMORY_CONSUMPTION: '128'
+      PHP_OPCACHE_INTERNED_STRINGS_BUFFER: '8'
+      PHP_OPCACHE_MAX_ACCELERATED_FILES: '4000'
+      WP_REDIS_HOST: 'redis'
+      WP_REDIS_PORT: 6379
+    volumes:
+      - wp_data:/var/www/html
+      - ./wordpress/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+
+
+  varnish:
+    image: varnish:7-alpine
+    cap_add:
+      - IPC_LOCK                   # Permite mlock en Kubernetes/Docker
+    ulimits:
+      memlock:
+        soft: -1                  # Sin límite blando
+        hard: -1                  # Sin límite duro
+    depends_on:
+      - nginx
+    restart: always
+    ports:
+      - '8080:80'
+    volumes:
+      - ./varnish/default.vcl:/etc/varnish/default.vcl:ro
+    command: ['varnishd', '-F', '-f', '/etc/varnish/default.vcl', '-a', '0.0.0.0:80']
+
+  nginx:
+    image: nginx:stable-alpine
+    depends_on:
+      - wordpress
+    restart: always
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+      - wp_data:/var/www/html
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  db_data:
+  redis_data:
+  wp_data:
+
