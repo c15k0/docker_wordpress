@@ -10,12 +10,27 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     command: --innodb-buffer-pool-size=512M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:6-alpine
     restart: always
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    command: redis-server --appendonly yes
+    security_opt:
+      - no-new-privileges:true
 
   wordpress:
     build: wordpress/.
@@ -37,6 +52,12 @@ services:
     volumes:
       - wp_data:/var/www/html
       - ./wordpress/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pgrep php-fpm || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 
   varnish:
@@ -55,6 +76,12 @@ services:
     volumes:
       - ./varnish/default.vcl:/etc/varnish/default.vcl:ro
     command: ['varnishd', '-F', '-f', '/etc/varnish/default.vcl', '-a', '0.0.0.0:80']
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/", "-o", "/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   nginx:
     image: nginx:stable-alpine
@@ -69,6 +96,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck:
+      test: [ "CMD", "nginx", "-t" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   db_data:

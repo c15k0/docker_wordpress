@@ -22,22 +22,18 @@ sub vcl_recv {
         return (synth(405, "Method not allowed"));
     }
 
-    # Pasar todo excepto GET/HEAD
     if (req.method != "GET" && req.method != "HEAD") {
         return (pass);
     }
 
-    # No cachear URLs con query string
     if (req.url ~ "\?.*") {
         return (pass);
     }
 
-    # No cachear usuarios logueados o comentarios
     if (req.http.Authorization || req.http.Cookie ~ "(wordpress_|wp-postpass_|comment_author_)" ) {
         return (pass);
     }
 
-    # De lo contrario, cachear
     return (hash);
 }
 
@@ -47,14 +43,12 @@ sub vcl_backend_response {
         return (pass);
     }
 
-    # Extender TTL para recursos estáticos
     if (bereq.url ~ "\.(png|gif|jpg|jpeg|css|js|ico|svg|woff2?)$") {
         set beresp.ttl = 30d;
     } else {
         set beresp.ttl = 5m;
     }
 
-    # Grace mode para staleness
     set beresp.grace = 1h;
 }
 
