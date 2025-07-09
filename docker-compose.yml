@@ -3,10 +3,10 @@ services:
     image: mariadb:10.6
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: P4yLynX
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wp_user
-      MYSQL_PASSWORD: wp_p4ylynx
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-wordpress}
+      MYSQL_USER: ${DB_USER:-wp_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wp_password}
     volumes:
       - db_data:/var/lib/mysql
     command: --innodb-buffer-pool-size=512M
@@ -25,9 +25,9 @@ services:
     restart: always
     environment:
       WORDPRESS_DB_HOST: db:3306
-      WORDPRESS_DB_USER: wp_user
-      WORDPRESS_DB_PASSWORD: wp_p4ylynx
-      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: ${DB_USER:-wp_user}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wp_password}
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
       PHP_OPCACHE_ENABLE: '1'
       PHP_OPCACHE_MEMORY_CONSUMPTION: '128'
       PHP_OPCACHE_INTERNED_STRINGS_BUFFER: '8'
@@ -42,11 +42,11 @@ services:
   varnish:
     image: varnish:7-alpine
     cap_add:
-      - IPC_LOCK                   # Permite mlock en Kubernetes/Docker
+      - IPC_LOCK
     ulimits:
       memlock:
-        soft: -1                  # Sin límite blando
-        hard: -1                  # Sin límite duro
+        soft: -1
+        hard: -1
     depends_on:
       - nginx
     restart: always
